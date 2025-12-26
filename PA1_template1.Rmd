@@ -1,0 +1,72 @@
+---
+title: "Reproducible Research: Peer Assessment 1"
+output: 
+  html_document:
+    keep_md: true
+---
+
+
+
+## Loading and preprocessing the data
+```{r Load-the-data, echo=TRUE}
+activity <- read.csv("https://raw.githubusercontent.com/Caddiecxdy/RepData_PeerAssessment1/master/activity.csv")
+```
+## What is mean total number of steps taken per day?
+```{r total-number-of-steps-taken-per-day, echo=TRUE}
+library(dplyr)
+daily_steps <- activity %>% group_by(date) %>% summarize(total_steps = sum(steps, na.rm = TRUE))
+hist(daily_steps$total_steps)
+mean_daily_steps<-mean(daily_steps$total_steps)
+print(mean_daily_steps)
+median_daily_steps<-median(daily_steps$total_steps)
+print(median_daily_steps)
+```
+## What is the average daily activity pattern?
+```{r average_daily_activity_pattern, echo=TRUE}
+interval_average <- activity %>%
+  group_by(interval) %>%
+  summarise(avg_steps = mean(steps, na.rm = TRUE)) %>%
+  arrange(interval)
+plot(interval_average$interval, interval_average$avg_steps, type = "l")
+max_point <- interval_average[which.max(interval_average$avg_steps), ]
+print(max_point$interval)
+```
+
+## Imputing missing values
+```{r Imputing_missing_values, echo=TRUE}
+no_NA <- sum(is.na(activity))
+print(no_NA)
+activity_filled_mean <- activity %>%
+  group_by(date) %>%
+  mutate(
+    steps_filled = ifelse(is.na(steps), mean(steps, na.rm = TRUE), steps))
+hist(activity_filled_mean$steps_filled)
+mean_daily_filled_steps<-mean(activity_filled_mean$steps_filled,na.rm = TRUE)
+print(mean_daily_filled_steps)
+median_daily_filled_steps<-median(activity_filled_mean$steps_filled,na.rm = TRUE)
+print(median_daily_filled_steps)
+```
+## Are there differences in activity patterns between weekdays and weekends?
+```{r weekdays_and_weekends, echo=TRUE}
+activity_weekends <- activity_filled_mean %>%
+  mutate(
+    date = as.Date(date),
+    day_type = ifelse(
+      weekdays(date) %in% c("Saturday", "Sunday"),
+      "weekend",
+      "weekday"
+    ),
+    day_type = factor(day_type, levels = c("weekday", "weekend"))
+  )
+interval_avg <- aggregate(steps ~ interval + day_type, 
+                         data = activity_weekends, 
+                         FUN = mean)
+weekday_data <- subset(interval_avg, day_type == "weekday")
+weekend_data <- subset(interval_avg, day_type == "weekend")
+weekday_data <- weekday_data[order(weekday_data$interval), ]
+weekend_data <- weekend_data[order(weekend_data$interval), ]
+plot(weekday_data$interval, weekday_data$steps,
+     type = "l")
+plot(weekend_data$interval, weekend_data$steps,
+     type = "l")
+```
